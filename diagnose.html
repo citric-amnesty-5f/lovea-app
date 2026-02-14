@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoveAI - Login Diagnostic</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            font-size: 14px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .test-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        input {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+        button {
+            background: white;
+            color: #667eea;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .log {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-left: 3px solid transparent;
+            padding-left: 10px;
+        }
+        .success { border-left-color: #4ade80; color: #4ade80; }
+        .error { border-left-color: #f87171; color: #f87171; }
+        .info { border-left-color: #60a5fa; color: #60a5fa; }
+        .warning { border-left-color: #fbbf24; color: #fbbf24; }
+        .step { border-left-color: #a78bfa; color: #a78bfa; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔬 LoveAI Login Diagnostic</h1>
+
+        <div class="test-section">
+            <h2>Step-by-Step Login Test</h2>
+
+            <div class="form-group">
+                <label>Email:</label>
+                <input type="email" id="email" value="user1@loveai.com">
+            </div>
+
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" id="password" value="user123">
+            </div>
+
+            <button onclick="runFullDiagnostic()" id="testBtn">🧪 Run Full Diagnostic</button>
+            <button onclick="clearLog()">🗑️ Clear Log</button>
+
+            <div class="log" id="log"></div>
+        </div>
+    </div>
+
+    <script src="js/backend-api.js"></script>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        async function runFullDiagnostic() {
+            clearLog();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('testBtn');
+
+            btn.disabled = true;
+            btn.textContent = 'Running diagnostic...';
+
+            try {
+                // Step 1: Check initial state
+                log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'step');
+                log('STEP 1: Initial State Check', 'step');
+                log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'step');
+
+                log(`window.backendAPI exists: ${!!window.backendAPI}`, 'info');
+                log(`window.backendAPI.token: ${window.backendAPI?.token || 'null'}`, 'info');
+                log(`window.backendAPI.currentUserId: ${window.backendAPI?.currentUserId || 'null'}`, 'info');
+                log(`window.backendAPI.isLoggedIn(): ${window.backendAPI?.isLoggedIn()}`, 'info');
+                log(`localStorage.auth_token: ${localStorage.getItem('auth_token') || 'null'}`, 'info');
+                log(`localStorage.user_id: ${localStorage.getItem('user_id') || 'null'}`, 'info');
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Step 2: Attempt login
+                log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'step');
+                log('STEP 2: Attempting Login', 'step');
+                log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'step');
+
+                log(`Email: ${email}`, 'info');
+                log('Calling window.backendAPI.login()...', 'info');
+
+                const loginResult = await window.backendAPI.login(email, password);
+
+                log(`✅ Login SUCCESS`, 'success');
+                log(`User ID: ${loginResult.user_id}`, 'success');
+                log(`Role: ${loginResult.role}`, 'success');
+                log(`Token (first 30 chars): ${loginResult.access_token.substring(0, 30)}...`, 'success');
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Step 3: Check state after login
+                log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'step');
+                log('STEP 3: State After Login', 'step');
+                log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'step');
+
+                log(`window.backendAPI.token: ${window.backendAPI.token ? 'SET (' + window.backendAPI.token.substring(0, 20) + '...)' : 'NULL'}`, window.backendAPI.token ? 'success' : 'error');
+                log(`window.backendAPI.currentUserId: ${window.backendAPI.currentUserId || 'NULL'}`, window.backendAPI.currentUserId ? 'success' : 'error');
+                log(`window.backendAPI.isLoggedIn(): ${window.backendAPI.isLoggedIn()}`, window.backendAPI.isLoggedIn() ? 'success' : 'error');
+                log(`localStorage.auth_token exists: ${!!localStorage.getItem('auth_token')}`, !!localStorage.getItem('auth_token') ? 'success' : 'error');
+                log(`localStorage.user_id: ${localStorage.getItem('user_id') || 'NULL'}`, !!localStorage.getItem('user_id') ? 'success' : 'error');
+
+                if (!window.backendAPI.isLoggedIn()) {
+                    log('⚠️ WARNING: isLoggedIn() returns false after successful login!', 'error');
+                    log('This is the bug! Discovery profiles won\'t load.', 'error');
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Step 4: Fetch profile
+                log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'step');
+                log('STEP 4: Fetching User Profile', 'step');
+                log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'step');
+
+                log('Calling window.backendAPI.getMyProfile()...', 'info');
+                const profile = await window.backendAPI.getMyProfile();
+
+                log(`✅ Profile fetch SUCCESS`, 'success');
+                log(`Name: ${profile.name}`, 'success');
+                log(`Age: ${profile.age}`, 'success');
+                log(`Gender: ${profile.gender}`, 'success');
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Step 5: Test discovery profiles
+                log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'step');
+                log('STEP 5: Fetching Discovery Profiles', 'step');
+                log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'step');
+
+                log(`Pre-check isLoggedIn(): ${window.backendAPI.isLoggedIn()}`, window.backendAPI.isLoggedIn() ? 'info' : 'error');
+
+                if (!window.backendAPI.isLoggedIn()) {
+                    log('❌ CRITICAL: Cannot fetch discovery profiles because isLoggedIn() is false!', 'error');
+                    log('This is why the app shows "Error loading profiles"', 'error');
+                } else {
+                    log('Calling window.backendAPI.getDiscoveryProfiles(20)...', 'info');
+                    const discoveryProfiles = await window.backendAPI.getDiscoveryProfiles(20);
+
+                    log(`✅ Discovery profiles SUCCESS`, 'success');
+                    log(`Found ${discoveryProfiles.length} profiles`, 'success');
+
+                    if (discoveryProfiles.length > 0) {
+                        log(`First profile: ${discoveryProfiles[0].name}, ${discoveryProfiles[0].age}`, 'success');
+                    }
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Step 6: Final summary
+                log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'step');
+                log('STEP 6: Diagnostic Summary', 'step');
+                log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'step');
+
+                const allGood =
+                    window.backendAPI.token &&
+                    window.backendAPI.currentUserId &&
+                    window.backendAPI.isLoggedIn();
+
+                if (allGood) {
+                    log('✅ ALL CHECKS PASSED!', 'success');
+                    log('Login flow is working correctly.', 'success');
+                    log('You should be able to use the main app now.', 'success');
+                    log(`<a href="index.html" style="color: white; text-decoration: underline;">→ Go to Main App</a>`, 'success');
+                } else {
+                    log('❌ DIAGNOSTIC FAILED', 'error');
+                    log('Issues detected:', 'error');
+                    if (!window.backendAPI.token) log('  - Token not set in window.backendAPI', 'error');
+                    if (!window.backendAPI.currentUserId) log('  - User ID not set in window.backendAPI', 'error');
+                    if (!window.backendAPI.isLoggedIn()) log('  - isLoggedIn() returns false', 'error');
+                    log('This explains why the main app fails to load discovery profiles.', 'error');
+                }
+
+            } catch (error) {
+                log('❌ EXCEPTION: ' + error.message, 'error');
+                log('Stack trace:', 'error');
+                log(error.stack, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🧪 Run Full Diagnostic';
+            }
+        }
+
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            log('Diagnostic page loaded', 'info');
+            log('Click "Run Full Diagnostic" to test login flow', 'info');
+        });
+    </script>
+</body>
+</html>

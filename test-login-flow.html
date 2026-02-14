@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Flow Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #0f0;
+            padding: 20px;
+        }
+        button {
+            padding: 15px 30px;
+            background: #0f0;
+            color: #000;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px 10px 10px 0;
+        }
+        .log {
+            background: #000;
+            border: 2px solid #0f0;
+            padding: 15px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .error { color: #f00; }
+        .success { color: #0f0; }
+        .warning { color: #ff0; }
+    </style>
+</head>
+<body>
+    <h1>🔬 Login Flow Debugger</h1>
+    <button onclick="testCompleteFlow()">Run Complete Login Flow</button>
+    <button onclick="clearLog()">Clear</button>
+    <div id="log" class="log"></div>
+
+    <script src="js/backend-api.js"></script>
+
+    <script>
+        function log(msg, type = '') {
+            const logDiv = document.getElementById('log');
+            const span = document.createElement('span');
+            span.className = type;
+            span.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+            logDiv.appendChild(span);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        async function testCompleteFlow() {
+            clearLog();
+            log('=== STARTING COMPLETE LOGIN FLOW TEST ===');
+
+            try {
+                // Step 1: Initial state
+                log('\n1️⃣ Checking initial state...');
+                log(`   window.backendAPI exists: ${!!window.backendAPI}`);
+                log(`   backendAPI.token: ${window.backendAPI?.token || 'null'}`);
+                log(`   backendAPI.currentUserId: ${window.backendAPI?.currentUserId || 'null'}`);
+                log(`   isLoggedIn(): ${window.backendAPI?.isLoggedIn()}`);
+
+                // Step 2: Login
+                log('\n2️⃣ Calling login()...');
+                const loginResult = await window.backendAPI.login('user1@loveai.com', 'user123');
+                log(`   ✅ Login successful!`, 'success');
+                log(`   User ID: ${loginResult.user_id}`);
+                log(`   Role: ${loginResult.role}`);
+                log(`   Token: ${loginResult.access_token.substring(0, 30)}...`);
+
+                // Step 3: Check state after login
+                log('\n3️⃣ Checking state after login...');
+                log(`   backendAPI.token: ${window.backendAPI.token ? 'SET' : 'NULL'}`, window.backendAPI.token ? 'success' : 'error');
+                log(`   backendAPI.currentUserId: ${window.backendAPI.currentUserId || 'NULL'}`, window.backendAPI.currentUserId ? 'success' : 'error');
+                log(`   isLoggedIn(): ${window.backendAPI.isLoggedIn()}`, window.backendAPI.isLoggedIn() ? 'success' : 'error');
+                log(`   localStorage auth_token: ${!!localStorage.getItem('auth_token')}`, !!localStorage.getItem('auth_token') ? 'success' : 'error');
+                log(`   localStorage user_id: ${localStorage.getItem('user_id') || 'NULL'}`, !!localStorage.getItem('user_id') ? 'success' : 'error');
+
+                if (!window.backendAPI.isLoggedIn()) {
+                    log(`   ❌ CRITICAL: isLoggedIn() is FALSE after successful login!`, 'error');
+                    log(`   This is the bug causing discovery to fail!`, 'error');
+                    return;
+                }
+
+                // Step 4: Get profile
+                log('\n4️⃣ Calling getMyProfile()...');
+                const profile = await window.backendAPI.getMyProfile();
+                log(`   ✅ Profile loaded!`, 'success');
+                log(`   Name: ${profile.name}`);
+                log(`   Age: ${profile.age || 'N/A'}`);
+
+                // Step 5: Try to get discovery profiles
+                log('\n5️⃣ Calling getDiscoveryProfiles()...');
+                log(`   Pre-check: isLoggedIn() = ${window.backendAPI.isLoggedIn()}`);
+
+                if (!window.backendAPI.isLoggedIn()) {
+                    log(`   ❌ Cannot call getDiscoveryProfiles - not logged in!`, 'error');
+                    return;
+                }
+
+                const profiles = await window.backendAPI.getDiscoveryProfiles(20);
+                log(`   ✅ Discovery profiles loaded!`, 'success');
+                log(`   Found ${profiles.length} profiles`);
+                if (profiles.length > 0) {
+                    log(`   First profile: ${profiles[0].name}, age ${profiles[0].age}`);
+                }
+
+                log('\n✅ ✅ ✅ ALL TESTS PASSED! ✅ ✅ ✅', 'success');
+                log('The API and authentication flow works perfectly!', 'success');
+                log('If the main app still fails, the issue is in the app UI code, not the API.', 'warning');
+
+            } catch (error) {
+                log(`\n❌ ERROR: ${error.message}`, 'error');
+                log(`Stack: ${error.stack}`, 'error');
+            }
+        }
+
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            log('Page loaded. Click "Run Complete Login Flow" to test.');
+        });
+    </script>
+</body>
+</html>

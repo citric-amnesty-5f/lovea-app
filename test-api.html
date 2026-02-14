@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #output {
+            margin-top: 20px;
+            padding: 15px;
+            background: #000;
+            border: 1px solid #00ff00;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 API Direct Test</h1>
+    <p>API URL: <span id="apiUrl"></span></p>
+
+    <button onclick="test1()">1. Test Health</button>
+    <button onclick="test2()">2. Test Login</button>
+    <button onclick="test3()">3. Test Profile (after login)</button>
+    <button onclick="clearOutput()">Clear</button>
+
+    <div id="output">Ready...</div>
+
+    <script>
+        const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:8000'
+            : 'https://calyciform-undiffusively-jedidiah.ngrok-free.dev';
+
+        document.getElementById('apiUrl').textContent = API;
+        let token = null;
+
+        function log(msg) {
+            const output = document.getElementById('output');
+            output.textContent += '\n' + msg;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').textContent = 'Cleared...';
+        }
+
+        async function test1() {
+            log('\n=== TEST 1: Health Check ===');
+            try {
+                const res = await fetch(API + '/health');
+                const data = await res.json();
+                log('Status: ' + res.status);
+                log('Response: ' + JSON.stringify(data, null, 2));
+            } catch (err) {
+                log('ERROR: ' + err.message);
+                log('Stack: ' + err.stack);
+            }
+        }
+
+        async function test2() {
+            log('\n=== TEST 2: Login ===');
+            try {
+                const res = await fetch(API + '/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'user1@loveai.com',
+                        password: 'user123'
+                    })
+                });
+
+                log('Status: ' + res.status);
+                const data = await res.json();
+                log('Response: ' + JSON.stringify(data, null, 2));
+
+                if (data.access_token) {
+                    token = data.access_token;
+                    log('✓ Token saved for Test 3');
+                }
+            } catch (err) {
+                log('ERROR: ' + err.message);
+                log('Stack: ' + err.stack);
+            }
+        }
+
+        async function test3() {
+            log('\n=== TEST 3: Get Profile ===');
+            if (!token) {
+                log('ERROR: No token. Run Test 2 first!');
+                return;
+            }
+
+            try {
+                const res = await fetch(API + '/profiles/me', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+
+                log('Status: ' + res.status);
+                const data = await res.json();
+                log('Response: ' + JSON.stringify(data, null, 2));
+            } catch (err) {
+                log('ERROR: ' + err.message);
+                log('Stack: ' + err.stack);
+            }
+        }
+
+        // Auto-run health check
+        setTimeout(test1, 500);
+    </script>
+</body>
+</html>

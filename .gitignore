@@ -1,0 +1,31 @@
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+backend/venv/
+
+# Environment and local DB
+.env
+backend/.env
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs and temp files
+*.log
+
+# JavaScript
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+
+# Local tooling metadata
+.claude/

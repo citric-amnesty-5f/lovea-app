@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoveAI - Mobile Ready!</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .subtitle {
+            text-align: center;
+            opacity: 0.9;
+            margin-bottom: 30px;
+            font-size: 18px;
+        }
+        .status {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            font-size: 16px;
+        }
+        .status-icon {
+            font-size: 24px;
+            margin-right: 12px;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 18px;
+            margin: 12px 0;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            text-align: center;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        .btn-primary {
+            background: white;
+            color: #667eea;
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+        }
+        .info {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        .success { color: #4ade80; }
+        .warning { color: #fbbf24; }
+        .checking { opacity: 0.7; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💝 LoveAI</h1>
+        <p class="subtitle">AI-Powered Dating App</p>
+
+        <div class="status">
+            <div class="status-item" id="backendStatus">
+                <span class="status-icon">⏳</span>
+                <span class="checking">Checking backend...</span>
+            </div>
+            <div class="status-item" id="ngrokStatus">
+                <span class="status-icon">⏳</span>
+                <span class="checking">Checking ngrok...</span>
+            </div>
+        </div>
+
+        <a href="index.html" class="btn btn-primary" id="launchBtn" style="display:none;">
+            🚀 Launch LoveAI App
+        </a>
+
+        <a href="test-ngrok.html" class="btn btn-secondary">
+            🧪 Test Connection
+        </a>
+
+        <div class="info" id="accessInfo" style="display:none;">
+            <strong>📱 Access on Mobile:</strong><br>
+            <div class="code" id="mobileUrl">Loading...</div>
+        </div>
+
+        <div class="info">
+            <strong>💡 How to use:</strong><br>
+            • Test connection first<br>
+            • Then launch the app<br>
+            • Login with: user1@loveai.com / user123<br>
+            • Or create a new account
+        </div>
+    </div>
+
+    <script>
+        const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:8000'
+            : 'https://calyciform-undiffusively-jedidiah.ngrok-free.dev';
+
+        async function checkBackend() {
+            const statusEl = document.getElementById('backendStatus');
+            try {
+                const response = await fetch(API_URL + '/health');
+                const data = await response.json();
+
+                if (data.status === 'healthy') {
+                    statusEl.innerHTML = '<span class="status-icon success">✅</span><span>Backend: Online</span>';
+                    return true;
+                } else {
+                    statusEl.innerHTML = '<span class="status-icon warning">⚠️</span><span>Backend: Unhealthy</span>';
+                    return false;
+                }
+            } catch (error) {
+                statusEl.innerHTML = '<span class="status-icon">❌</span><span>Backend: Offline</span>';
+                console.error('Backend check failed:', error);
+                return false;
+            }
+        }
+
+        async function checkNgrok() {
+            const statusEl = document.getElementById('ngrokStatus');
+            try {
+                const response = await fetch(API_URL);
+                statusEl.innerHTML = '<span class="status-icon success">✅</span><span>ngrok: Connected</span>';
+                return true;
+            } catch (error) {
+                statusEl.innerHTML = '<span class="status-icon">❌</span><span>ngrok: Not accessible</span>';
+                return false;
+            }
+        }
+
+        async function init() {
+            const backendOk = await checkBackend();
+            const ngrokOk = await checkNgrok();
+
+            if (backendOk && ngrokOk) {
+                document.getElementById('launchBtn').style.display = 'block';
+            }
+
+            // Show mobile access info
+            const accessInfo = document.getElementById('accessInfo');
+            const mobileUrl = document.getElementById('mobileUrl');
+            const hostname = window.location.hostname;
+            const port = window.location.port || '80';
+
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                mobileUrl.textContent = 'http://10.0.0.124:3000';
+            } else {
+                mobileUrl.textContent = `http://${hostname}:${port}`;
+            }
+            accessInfo.style.display = 'block';
+        }
+
+        init();
+    </script>
+</body>
+</html>

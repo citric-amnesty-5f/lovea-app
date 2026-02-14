@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoveAI - Smart Dating</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Authentication Screen -->
+        <div id="authScreen" class="auth-screen active">
+            <div class="header">
+                <div class="logo">LoveAI</div>
+                <div class="ai-badge">AI-Powered Matching</div>
+            </div>
+
+            <div id="loginForm" class="auth-form">
+                <h2 style="margin-bottom: 20px;">Welcome Back</h2>
+                <div id="authError" class="error-message" style="display: none;"></div>
+                <div id="authSuccess" class="success-message" style="display: none;"></div>
+                
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                
+                <button class="auth-btn" id="loginBtn" onclick="handleLogin()">Login</button>
+                
+                <p>Don't have an account? <span class="auth-switch" onclick="switchToSignup()">Sign up</span></p>
+                <p style="margin-top: 15px; font-size: 12px; color: #666;">
+                    Demo Admin: admin@loveai.com / admin123<br>
+                    Demo User: user@loveai.com / user123
+                </p>
+            </div>
+
+            <div id="signupForm" class="auth-form" style="display: none;">
+                <h2 style="margin-bottom: 20px;">Join LoveAI</h2>
+                <div class="age-warning">
+                    <strong>Age Requirement:</strong> You must be 18 or older to create an account.
+                </div>
+                <div id="signupError" class="error-message" style="display: none;"></div>
+                <div id="signupSuccess" class="success-message" style="display: none;"></div>
+                
+                <div class="form-group">
+                    <label for="signupName">Full Name</label>
+                    <input type="text" id="signupName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="signupEmail">Email</label>
+                    <input type="email" id="signupEmail" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="signupPassword">Password</label>
+                    <input type="password" id="signupPassword" required minlength="6">
+                </div>
+                
+                <div class="form-group">
+                    <label for="signupAge">Age</label>
+                    <input type="number" id="signupAge" min="18" max="100" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="signupGender">Gender</label>
+                    <select id="signupGender" required>
+                        <option value="">Select...</option>
+                        <option value="M">Male</option>
+                        <option value="F">Female</option>
+                        <option value="T">Non-binary</option>
+                        <option value="O">Other</option>
+                    </select>
+                </div>
+                
+                <button class="auth-btn" id="signupBtn" onclick="handleSignup()">Create Account</button>
+                
+                <p>Already have an account? <span class="auth-switch" onclick="switchToLogin()">Login</span></p>
+            </div>
+        </div>
+
+        <!-- Main App Screen -->
+        <div id="mainScreen" class="main-screen">
+            <div class="header">
+                <div class="logo">LoveAI</div>
+                <div class="ai-badge">AI-Powered Matching</div>
+                <div class="user-info" id="userInfo">
+                    <span id="userWelcome">Welcome!</span>
+                    <button class="logout-btn" onclick="handleLogout()">Logout</button>
+                </div>
+                <div class="status" id="dbStatus">Initializing database...</div>
+            </div>
+
+            <div id="adminControls" class="admin-controls">
+                <button class="admin-btn" onclick="initializeDB()">Reset DB</button>
+                <button class="admin-btn" onclick="showDBStats()">DB Stats</button>
+                <button class="admin-btn" onclick="showUserStats()">User Stats</button>
+                <button class="admin-btn" onclick="addRandomProfile()">Add Profile</button>
+            </div>
+
+            <!-- Discover Screen (New Swipe Interface) -->
+        <div id="discoverScreen" class="app-screen">
+            <div class="screen-header">
+                <h2>Discover</h2>
+            </div>
+            <div class="swipe-container">
+                <div id="swipeCard" class="swipe-card"></div>
+                <div class="swipe-actions">
+                    <button class="swipe-btn swipe-btn-pass" onclick="swipeLeft()">✕</button>
+                    <button class="swipe-btn swipe-btn-super" onclick="superLike()">⭐</button>
+                    <button class="swipe-btn swipe-btn-like" onclick="swipeRight()">❤️</button>
+                </div>
+                <div id="profileDetailsContainer" class="profile-details-scroll"></div>
+            </div>
+        </div>
+
+        <!-- Matches Screen -->
+        <div id="matchesScreenWrapper" class="app-screen">
+            <div class="screen-header">
+                <h2>Matches</h2>
+            </div>
+            <div id="matchesGridContainer"></div>
+        </div>
+
+        <!-- Messages Screen -->
+        <div id="messagesScreenWrapper" class="app-screen">
+            <div id="matchesScreen">
+                <div class="screen-header">
+                    <h2>Messages</h2>
+                </div>
+                <div id="matchesContainer"></div>
+            </div>
+
+            <div id="chatScreen" style="display: none;">
+                <div class="chat-header">
+                    <button class="back-btn" onclick="closeChat()">←</button>
+                    <div class="chat-partner">
+                        <span id="chatPartnerAvatar" class="chat-avatar"></span>
+                        <span id="chatPartnerName"></span>
+                    </div>
+                </div>
+                <div id="messagesContainer" class="messages-container"></div>
+                <div class="message-input-container">
+                    <input type="text" id="messageInput" placeholder="Type a message..." />
+                    <button class="send-btn" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications Screen -->
+        <div id="notificationsScreen" class="app-screen">
+            <div class="screen-header">
+                <h2>Notifications</h2>
+            </div>
+            <div id="notificationsContainer"></div>
+        </div>
+
+        <!-- Settings Screen -->
+        <div id="settingsScreen" class="app-screen">
+            <div class="screen-header">
+                <h2>Settings</h2>
+            </div>
+            <div id="settingsContainer"></div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+            <button class="nav-item" onclick="showScreen('discover')">
+                <span class="nav-icon">🔍</span>
+                <span class="nav-label">Discover</span>
+            </button>
+            <button class="nav-item" onclick="showScreen('matches')">
+                <span class="nav-icon">❤️</span>
+                <span class="nav-label">Matches</span>
+                <span id="matchesBadge" class="nav-badge" style="display:none">0</span>
+            </button>
+            <button class="nav-item" onclick="showScreen('messages')">
+                <span class="nav-icon">💬</span>
+                <span class="nav-label">Messages</span>
+            </button>
+            <button class="nav-item" onclick="showScreen('notifications')">
+                <span class="nav-icon">🔔</span>
+                <span class="nav-label">Alerts</span>
+                <span id="notificationsBadge" class="nav-badge" style="display:none">0</span>
+            </button>
+            <button class="nav-item" onclick="showScreen('settings')">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Settings</span>
+            </button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/database.js"></script>
+    <script src="js/ai-matching.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/profiles.js"></script>
+    <script src="js/discovery.js"></script>
+    <script src="js/matches.js"></script>
+    <script src="js/messaging.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/onboarding.js"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

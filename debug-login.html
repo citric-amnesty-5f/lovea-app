@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Flow Debug</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #000;
+            color: #0f0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 14px;
+        }
+        #log {
+            margin-top: 20px;
+            padding: 15px;
+            background: #1a1a1a;
+            border: 1px solid #0f0;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Login Flow Debugger</h1>
+
+    <button onclick="testFullLogin()">Test Full Login Flow</button>
+    <button onclick="checkState()">Check Current State</button>
+    <button onclick="clearAll()">Clear All Storage</button>
+
+    <div id="log">Initializing...</div>
+
+    <script src="js/backend-api.js"></script>
+
+    <script>
+        function log(msg) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            logDiv.textContent += `\n[${timestamp}] ${msg}`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function checkState() {
+            log('\n=== CURRENT STATE ===');
+            log(`API URL: ${window.backendAPI ? 'Loaded' : 'NOT LOADED'}`);
+            log(`Has Token: ${window.backendAPI?.token ? 'YES' : 'NO'}`);
+            log(`Token in localStorage: ${localStorage.getItem('auth_token') ? 'YES' : 'NO'}`);
+            log(`User ID: ${localStorage.getItem('user_id') || 'NONE'}`);
+            log(`Current User in localStorage: ${localStorage.getItem('loveai_current_user') ? 'YES' : 'NO'}`);
+
+            if (window.backendAPI?.token) {
+                log(`Token preview: ${window.backendAPI.token.substring(0, 30)}...`);
+            }
+        }
+
+        async function testFullLogin() {
+            log('\n=== STARTING LOGIN TEST ===');
+
+            try {
+                // Step 1: Login
+                log('Step 1: Calling login...');
+                const result = await window.backendAPI.login('user1@loveai.com', 'user123');
+                log(`✓ Login successful! User ID: ${result.user_id}`);
+                log(`✓ Token received: ${result.access_token.substring(0, 30)}...`);
+
+                // Step 2: Check token is set
+                log('\nStep 2: Checking token is set in backendAPI...');
+                if (window.backendAPI.token) {
+                    log(`✓ Token is set in backendAPI`);
+                } else {
+                    log(`✗ ERROR: Token NOT set in backendAPI!`);
+                    return;
+                }
+
+                // Step 3: Try to get profile
+                log('\nStep 3: Fetching profile...');
+                const profile = await window.backendAPI.getMyProfile();
+                log(`✓ Profile loaded: ${profile.name}`);
+                log(`✓ Profile data: ${JSON.stringify(profile, null, 2)}`);
+
+                log('\n=== TEST PASSED ===');
+
+            } catch (error) {
+                log(`\n✗ TEST FAILED: ${error.message}`);
+                log(`Error stack: ${error.stack}`);
+            }
+        }
+
+        function clearAll() {
+            localStorage.clear();
+            log('\n✓ All localStorage cleared');
+            if (window.backendAPI) {
+                window.backendAPI.token = null;
+                window.backendAPI.currentUserId = null;
+                log('✓ backendAPI reset');
+            }
+        }
+
+        // Auto-check state on load
+        setTimeout(() => {
+            log('Debug page ready');
+            checkState();
+        }, 500);
+    </script>
+</body>
+</html>

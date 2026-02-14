@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Full Flow Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        .screen {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 16px;
+            display: none;
+        }
+        .screen.active {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+        }
+        input {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+        button {
+            background: white;
+            color: #667eea;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .status {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        .status.success {
+            background: rgba(34, 197, 94, 0.3);
+        }
+        .status.error {
+            background: rgba(239, 68, 68, 0.3);
+        }
+        .profile-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 10px 0;
+        }
+        .profile-name {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Full Flow Test</h1>
+
+        <!-- Login Screen -->
+        <div class="screen active" id="loginScreen">
+            <h2>Login</h2>
+            <div class="form-group">
+                <label>Email:</label>
+                <input type="email" id="email" value="user1@loveai.com">
+            </div>
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" id="password" value="user123">
+            </div>
+            <button onclick="testLogin()" id="loginBtn">Login</button>
+            <div class="status" id="loginStatus" style="display:none;"></div>
+        </div>
+
+        <!-- Main Screen -->
+        <div class="screen" id="mainScreen">
+            <h2>Discovery</h2>
+            <div class="status" id="mainStatus"></div>
+            <div id="profilesContainer"></div>
+            <button onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <script src="js/backend-api.js"></script>
+
+    <script>
+        let currentUser = null;
+
+        function showStatus(elementId, message, type = 'info') {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.className = `status ${type}`;
+            el.style.display = 'block';
+        }
+
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('loginBtn');
+
+            btn.disabled = true;
+            btn.textContent = 'Logging in...';
+
+            try {
+                showStatus('loginStatus', '1️⃣ Calling login API...', 'info');
+
+                // Step 1: Login
+                const loginResult = await window.backendAPI.login(email, password);
+
+                showStatus('loginStatus', `2️⃣ Login successful! User ID: ${loginResult.user_id}`, 'success');
+
+                // Check token immediately after login
+                console.log('[TEST] After login:');
+                console.log('  backendAPI.token:', window.backendAPI.token ? 'SET' : 'NULL');
+                console.log('  backendAPI.currentUserId:', window.backendAPI.currentUserId);
+                console.log('  isLoggedIn():', window.backendAPI.isLoggedIn());
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                showStatus('loginStatus', '3️⃣ Fetching profile...', 'info');
+
+                // Step 2: Get Profile
+                const profile = await window.backendAPI.getMyProfile();
+
+                currentUser = {
+                    id: loginResult.user_id,
+                    email: email,
+                    role: loginResult.role,
+                    profile: profile
+                };
+
+                console.log('[TEST] After getMyProfile:');
+                console.log('  profile.name:', profile.name);
+                console.log('  isLoggedIn():', window.backendAPI.isLoggedIn());
+
+                showStatus('loginStatus', `4️⃣ Profile loaded! Welcome, ${profile.name}`, 'success');
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Step 3: Switch to main screen
+                showStatus('loginStatus', '5️⃣ Switching to main screen...', 'info');
+
+                document.getElementById('loginScreen').classList.remove('active');
+                document.getElementById('mainScreen').classList.add('active');
+
+                // Step 4: Load discovery profiles
+                await loadDiscoveryProfiles();
+
+            } catch (error) {
+                console.error('[TEST] Login error:', error);
+                showStatus('loginStatus', `❌ Error: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Login';
+            }
+        }
+
+        async function loadDiscoveryProfiles() {
+            try {
+                showStatus('mainStatus', '6️⃣ Checking login state...', 'info');
+
+                console.log('[TEST] Before getDiscoveryProfiles:');
+                console.log('  backendAPI exists:', !!window.backendAPI);
+                console.log('  backendAPI.token:', window.backendAPI.token ? 'SET' : 'NULL');
+                console.log('  backendAPI.currentUserId:', window.backendAPI.currentUserId);
+                console.log('  isLoggedIn():', window.backendAPI.isLoggedIn());
+
+                if (!window.backendAPI.isLoggedIn()) {
+                    showStatus('mainStatus', '❌ CRITICAL BUG: isLoggedIn() returns false!', 'error');
+                    return;
+                }
+
+                showStatus('mainStatus', '7️⃣ Fetching discovery profiles...', 'info');
+
+                const profiles = await window.backendAPI.getDiscoveryProfiles(20);
+
+                console.log('[TEST] Got discovery profiles:', profiles.length);
+
+                showStatus('mainStatus', `8️⃣ SUCCESS! Loaded ${profiles.length} profiles`, 'success');
+
+                // Display profiles
+                const container = document.getElementById('profilesContainer');
+                container.innerHTML = '';
+
+                if (profiles.length === 0) {
+                    container.innerHTML = '<div class="status">No profiles available</div>';
+                } else {
+                    profiles.slice(0, 5).forEach(profile => {
+                        const card = document.createElement('div');
+                        card.className = 'profile-card';
+                        card.innerHTML = `
+                            <div class="profile-name">${profile.name}, ${profile.age}</div>
+                            <div>📍 ${profile.location || 'Unknown'}</div>
+                            <div>${profile.bio || 'No bio'}</div>
+                        `;
+                        container.appendChild(card);
+                    });
+                }
+
+            } catch (error) {
+                console.error('[TEST] Discovery error:', error);
+                showStatus('mainStatus', `❌ Error loading profiles: ${error.message}`, 'error');
+            }
+        }
+
+        function logout() {
+            window.backendAPI.logout();
+            currentUser = null;
+            document.getElementById('mainScreen').classList.remove('active');
+            document.getElementById('loginScreen').classList.add('active');
+            document.getElementById('profilesContainer').innerHTML = '';
+        }
+
+        // Auto-check session on load
+        window.addEventListener('load', async () => {
+            const token = localStorage.getItem('auth_token');
+            if (token && window.backendAPI.token) {
+                console.log('[TEST] Found existing session, loading main screen');
+                try {
+                    const profile = await window.backendAPI.getMyProfile();
+                    currentUser = { profile };
+                    document.getElementById('loginScreen').classList.remove('active');
+                    document.getElementById('mainScreen').classList.add('active');
+                    await loadDiscoveryProfiles();
+                } catch (error) {
+                    console.log('[TEST] Session invalid');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

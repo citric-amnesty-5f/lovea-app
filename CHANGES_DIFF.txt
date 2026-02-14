@@ -1,0 +1,143 @@
+================================================================================
+LOVEAI APP - CODE CHANGES SUMMARY
+================================================================================
+
+File 1: /Users/anilkumar/loveai-app/js/utils.js
+--------------------------------------------------------------------------------
+ADDED (at end of file, after line 30):
+
+function switchToSignup() {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('signupForm').style.display = 'block';
+    clearAuthMessages();
+}
+
+function switchToLogin() {
+    document.getElementById('signupForm').style.display = 'none';
+    document.getElementById('loginForm').style.display = 'block';
+    clearAuthMessages();
+}
+
+REASON: These functions were missing, causing "not defined" errors when clicking
+        the "Sign up" or "Login" links in the UI.
+
+================================================================================
+
+File 2: /Users/anilkumar/loveai-app/js/discovery.js
+--------------------------------------------------------------------------------
+CHANGED: superLike() function (lines 361-401)
+
+BEFORE:
+async function superLike() {
+    if (!currentUser) {
+        showLoginRequired('Login to super like profiles!');
+        return;
+    }
+
+    const profile = discoveryProfiles[currentProfileIndex];
+
+    try {
+        // Use backend API
+        if (window.backendAPI && window.backendAPI.isLoggedIn()) {
+            const result = await window.backendAPI.createInteraction(profile.id, 'super_like');
+            ...
+
+AFTER:
+async function superLike() {
+    if (!currentUser) {
+        showLoginRequired('Login to super like profiles!');
+        return;
+    }
+
+    const profile = discoveryProfiles[currentProfileIndex];
+
+    // Check if profile exists
+    if (!profile) {
+        console.error('No profile at index:', currentProfileIndex);
+        showStatus('No profile available');
+        return;
+    }
+
+    try {
+        // Use backend API
+        if (window.backendAPI && window.backendAPI.isLoggedIn()) {
+            const profileId = profile.id || profile.userId;
+            if (!profileId) {
+                console.error('Profile has no ID:', profile);
+                showStatus('Error: Profile has no ID');
+                return;
+            }
+            const result = await window.backendAPI.createInteraction(profileId, 'super_like');
+            ...
+
+REASON: Added validation to prevent "Cannot read property 'id' of undefined" errors.
+        Now checks if profile exists and validates profile ID before use.
+
+================================================================================
+
+File 3: /Users/anilkumar/loveai-app/js/auth-backend.js
+--------------------------------------------------------------------------------
+CHANGED: handleLogout() function - TWO locations (try block and catch block)
+
+BEFORE (lines 156-169):
+        // Clear any auth messages
+        const authError = document.getElementById('authError');
+        const authSuccess = document.getElementById('authSuccess');
+        if (authError) authError.style.display = 'none';
+        if (authSuccess) authSuccess.style.display = 'none';
+
+        // Clear login form
+        const loginEmail = document.getElementById('loginEmail');
+        const loginPassword = document.getElementById('loginPassword');
+        if (loginEmail) loginEmail.value = '';
+        if (loginPassword) loginPassword.value = '';
+
+        // Return to auth screen
+        document.getElementById('mainScreen').classList.remove('active');
+        document.getElementById('authScreen').classList.add('active');
+
+AFTER (lines 156-180):
+        // Clear any auth messages
+        const authError = document.getElementById('authError');
+        const authSuccess = document.getElementById('authSuccess');
+        const signupError = document.getElementById('signupError');
+        const signupSuccess = document.getElementById('signupSuccess');
+        if (authError) authError.style.display = 'none';
+        if (authSuccess) authSuccess.style.display = 'none';
+        if (signupError) signupError.style.display = 'none';
+        if (signupSuccess) signupSuccess.style.display = 'none';
+
+        // Clear login form
+        const loginEmail = document.getElementById('loginEmail');
+        const loginPassword = document.getElementById('loginPassword');
+        if (loginEmail) loginEmail.value = '';
+        if (loginPassword) loginPassword.value = '';
+
+        // Ensure login form is shown (not signup)
+        const loginForm = document.getElementById('loginForm');
+        const signupForm = document.getElementById('signupForm');
+        if (loginForm) loginForm.style.display = 'block';
+        if (signupForm) signupForm.style.display = 'none';
+
+        // Return to auth screen
+        document.getElementById('mainScreen').classList.remove('active');
+        document.getElementById('authScreen').classList.add('active');
+
+REASON: Logout wasn't clearing signup messages or resetting form state properly.
+        After logout, users would see stale "Login successful!" messages or
+        the signup form instead of the login form.
+
+NOTE: The same changes were applied in the catch block (lines 179-205) to ensure
+      cleanup happens even if the backend call fails.
+
+================================================================================
+
+SUMMARY OF CHANGES:
+1. utils.js - Added 2 missing functions (13 lines added)
+2. discovery.js - Enhanced superLike() validation (11 lines added)
+3. auth-backend.js - Enhanced logout cleanup (12 lines added in 2 places)
+
+Total: 3 files modified, ~37 lines added, 0 lines removed
+All changes are additive (no existing code removed), reducing risk of regression.
+
+================================================================================

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raw Response Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #0f0;
+            padding: 20px;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { color: #0ff; margin-bottom: 20px; }
+        button {
+            padding: 15px 30px;
+            background: #0f0;
+            color: #000;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px 10px 10px 0;
+        }
+        .response {
+            background: #000;
+            border: 2px solid #0f0;
+            padding: 15px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .error { border-color: #f00; color: #f00; }
+        .success { border-color: #0f0; color: #0f0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔬 Raw API Response Inspector</h1>
+        <p>This shows EXACTLY what the API returns (before JSON parsing)</p>
+
+        <div>
+            <button onclick="testHealth()">Test /health</button>
+            <button onclick="testLogin()">Test /auth/login</button>
+            <button onclick="testProfile()">Test /profiles/me</button>
+        </div>
+
+        <div id="output"></div>
+    </div>
+
+    <script>
+        const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:8000'
+            : 'https://calyciform-undiffusively-jedidiah.ngrok-free.dev';
+
+        let authToken = null;
+
+        function display(title, content, type = 'response') {
+            const output = document.getElementById('output');
+            output.innerHTML = `
+                <div class="${type}">
+                    <strong>${title}</strong>
+                    <hr style="margin: 10px 0; border-color: currentColor;">
+                    ${content}
+                </div>
+            `;
+        }
+
+        async function testHealth() {
+            try {
+                display('Testing...', 'Fetching ' + API_URL + '/health');
+
+                const response = await fetch(API_URL + '/health');
+
+                const text = await response.text();
+
+                let output = `Status: ${response.status} ${response.statusText}\n\n`;
+                output += `Headers:\n`;
+                for (const [key, value] of response.headers.entries()) {
+                    output += `  ${key}: ${value}\n`;
+                }
+                output += `\nRaw Response Body:\n`;
+                output += text;
+
+                display('/health Response', output, response.ok ? 'success' : 'error');
+
+                // Try to parse as JSON
+                try {
+                    const json = JSON.parse(text);
+                    display('/health Response', output + '\n\n✅ Valid JSON:\n' + JSON.stringify(json, null, 2), 'success');
+                } catch (e) {
+                    display('/health Response', output + '\n\n❌ NOT VALID JSON!\nError: ' + e.message, 'error');
+                }
+
+            } catch (error) {
+                display('ERROR', error.message + '\n\n' + error.stack, 'error');
+            }
+        }
+
+        async function testLogin() {
+            try {
+                display('Testing...', 'Posting to ' + API_URL + '/auth/login');
+
+                const response = await fetch(API_URL + '/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'user1@loveai.com',
+                        password: 'user123'
+                    })
+                });
+
+                const text = await response.text();
+
+                let output = `Status: ${response.status} ${response.statusText}\n\n`;
+                output += `Headers:\n`;
+                for (const [key, value] of response.headers.entries()) {
+                    output += `  ${key}: ${value}\n`;
+                }
+                output += `\nRaw Response Body:\n`;
+                output += text;
+
+                // Try to parse as JSON
+                try {
+                    const json = JSON.parse(text);
+                    output += '\n\n✅ Valid JSON:\n' + JSON.stringify(json, null, 2);
+
+                    if (json.access_token) {
+                        authToken = json.access_token;
+                        output += '\n\n✅ Token saved for profile test';
+                    }
+
+                    display('/auth/login Response', output, 'success');
+                } catch (e) {
+                    display('/auth/login Response', output + '\n\n❌ NOT VALID JSON!\nError: ' + e.message, 'error');
+                }
+
+            } catch (error) {
+                display('ERROR', error.message + '\n\n' + error.stack, 'error');
+            }
+        }
+
+        async function testProfile() {
+            if (!authToken) {
+                display('ERROR', 'No token! Run "Test /auth/login" first.', 'error');
+                return;
+            }
+
+            try {
+                display('Testing...', 'Fetching ' + API_URL + '/profiles/me with token');
+
+                const response = await fetch(API_URL + '/profiles/me', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const text = await response.text();
+
+                let output = `Status: ${response.status} ${response.statusText}\n\n`;
+                output += `Headers:\n`;
+                for (const [key, value] of response.headers.entries()) {
+                    output += `  ${key}: ${value}\n`;
+                }
+                output += `\nRaw Response Body:\n`;
+                output += text;
+
+                // Try to parse as JSON
+                try {
+                    const json = JSON.parse(text);
+                    display('/profiles/me Response', output + '\n\n✅ Valid JSON:\n' + JSON.stringify(json, null, 2), 'success');
+                } catch (e) {
+                    display('/profiles/me Response', output + '\n\n❌ NOT VALID JSON!\nError: ' + e.message, 'error');
+                }
+
+            } catch (error) {
+                display('ERROR', error.message + '\n\n' + error.stack, 'error');
+            }
+        }
+
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            display('Ready', `API URL: ${API_URL}\nHostname: ${window.location.hostname}\n\nClick a button to test...`);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Registration Test</title>
+</head>
+<body>
+    <h1>Registration Test</h1>
+    <form id="testForm">
+        <div>
+            <label>Name: <input type="text" id="name" value="Test User"></label>
+        </div>
+        <div>
+            <label>Email: <input type="email" id="email" value="testxyz@test.com"></label>
+        </div>
+        <div>
+            <label>Password: <input type="password" id="password" value="Test1234"></label>
+        </div>
+        <div>
+            <label>Age: <input type="number" id="age" value="25"></label>
+        </div>
+        <div>
+            <label>Gender: 
+                <select id="gender">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                </select>
+            </label>
+        </div>
+        <button type="submit">Register</button>
+    </form>
+    <div id="result"></div>
+    <div id="error" style="color: red;"></div>
+
+    <script src="js/backend-api.js"></script>
+    <script>
+        const backendAPI = new BackendAPI();
+        window.backendAPI = backendAPI;
+
+        document.getElementById('testForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const age = document.getElementById('age').value;
+            const gender = document.getElementById('gender').value;
+            
+            // Calculate date of birth from age
+            const today = new Date();
+            const birthYear = today.getFullYear() - parseInt(age);
+            const dateOfBirth = `${birthYear}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            
+            const userData = {
+                email: email,
+                password: password,
+                name: name,
+                date_of_birth: dateOfBirth,
+                gender: gender.toLowerCase()
+            };
+            
+            console.log('Sending registration data:', userData);
+            
+            try {
+                const result = await window.backendAPI.register(userData);
+                console.log('Success:', result);
+                document.getElementById('result').innerHTML = `<h2>Success!</h2><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                document.getElementById('error').innerHTML = '';
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('error').innerHTML = `<h2>Error!</h2><pre>${error.message}</pre>`;
+                document.getElementById('result').innerHTML = '';
+            }
+        });
+    </script>
+</body>
+</html>

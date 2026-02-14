@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status Test</title>
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+            background: #000;
+            color: #0f0;
+        }
+        #status {
+            padding: 20px;
+            background: #1a1a1a;
+            border: 2px solid #0f0;
+            margin: 20px 0;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 16px;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Login & Discovery Status Test</h1>
+
+    <button onclick="testLogin()">1. Test Login</button>
+    <button onclick="testDiscovery()">2. Test Discovery (after login)</button>
+    <button onclick="checkState()">3. Check State</button>
+
+    <div id="status">Ready...</div>
+
+    <script src="js/backend-api.js"></script>
+
+    <script>
+        let statusDiv = document.getElementById('status');
+
+        function log(msg) {
+            statusDiv.textContent += '\n' + msg;
+        }
+
+        async function testLogin() {
+            statusDiv.textContent = 'Testing login...\n';
+
+            try {
+                const result = await window.backendAPI.login('user1@loveai.com', 'user123');
+                log('✓ Login OK');
+                log('  User ID: ' + result.user_id);
+                log('  Role: ' + result.role);
+                log('  Token: ' + result.access_token.substring(0, 20) + '...');
+
+                // Check if token is set
+                log('\nChecking backendAPI state:');
+                log('  backendAPI.token: ' + (window.backendAPI.token ? 'SET' : 'NOT SET'));
+                log('  backendAPI.currentUserId: ' + window.backendAPI.currentUserId);
+                log('  isLoggedIn(): ' + window.backendAPI.isLoggedIn());
+
+            } catch (error) {
+                log('✗ Login failed: ' + error.message);
+            }
+        }
+
+        async function testDiscovery() {
+            statusDiv.textContent = 'Testing discovery...\n';
+
+            log('Checking login state:');
+            log('  isLoggedIn(): ' + window.backendAPI.isLoggedIn());
+            log('  token exists: ' + !!window.backendAPI.token);
+            log('  userId: ' + window.backendAPI.currentUserId);
+
+            if (!window.backendAPI.isLoggedIn()) {
+                log('\n✗ Not logged in! Run test 1 first.');
+                return;
+            }
+
+            try {
+                log('\nCalling getDiscoveryProfiles...');
+                const profiles = await window.backendAPI.getDiscoveryProfiles(20);
+                log('✓ Got ' + profiles.length + ' profiles');
+                if (profiles.length > 0) {
+                    log('  First profile: ' + profiles[0].name);
+                }
+            } catch (error) {
+                log('✗ Discovery failed: ' + error.message);
+            }
+        }
+
+        function checkState() {
+            statusDiv.textContent = 'Current State:\n';
+            log('localStorage:');
+            log('  auth_token: ' + (localStorage.getItem('auth_token') ? 'exists' : 'missing'));
+            log('  user_id: ' + localStorage.getItem('user_id'));
+            log('  loveai_current_user: ' + (localStorage.getItem('loveai_current_user') ? 'exists' : 'missing'));
+
+            log('\nbackendAPI:');
+            log('  exists: ' + !!window.backendAPI);
+            log('  token: ' + (window.backendAPI?.token ? 'exists' : 'missing'));
+            log('  currentUserId: ' + window.backendAPI?.currentUserId);
+            log('  isLoggedIn(): ' + window.backendAPI?.isLoggedIn());
+        }
+
+        // Auto-check on load
+        setTimeout(checkState, 500);
+    </script>
+</body>
+</html>

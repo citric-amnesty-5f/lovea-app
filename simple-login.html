@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Login Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #667eea;
+            color: white;
+        }
+        input, button {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        input {
+            background: white;
+            color: #333;
+        }
+        button {
+            background: white;
+            color: #667eea;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.3);
+            word-wrap: break-word;
+        }
+        .success { background: rgba(34, 197, 94, 0.3); }
+        .error { background: rgba(239, 68, 68, 0.3); }
+    </style>
+</head>
+<body>
+    <h1>🔐 Simple Login</h1>
+
+    <input type="email" id="email" placeholder="Email" value="testuser@test.com">
+    <input type="password" id="password" placeholder="Password" value="Test1234">
+    <button onclick="login()">Login</button>
+
+    <div id="result"></div>
+
+    <script>
+        const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:8000'
+            : 'https://calyciform-undiffusively-jedidiah.ngrok-free.dev';
+
+        document.getElementById('result').innerHTML = `Using API: ${API_URL}`;
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+
+            resultDiv.innerHTML = '⏳ Logging in...';
+            resultDiv.className = '';
+
+            try {
+                const response = await fetch(API_URL + '/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.className = 'success';
+                    resultDiv.innerHTML = `
+                        ✅ <strong>Login Successful!</strong><br><br>
+                        User ID: ${data.user_id}<br>
+                        Role: ${data.role}<br>
+                        Token: ${data.access_token.substring(0, 30)}...<br><br>
+                        <button onclick="location.href='index.html'">Go to App</button>
+                    `;
+
+                    // Save to localStorage
+                    localStorage.setItem('auth_token', data.access_token);
+                    localStorage.setItem('user_id', data.user_id);
+                } else {
+                    resultDiv.className = 'error';
+                    resultDiv.innerHTML = `❌ Login failed:<br>${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = `❌ Error:<br>${error.message}<br><br>Stack:<br>${error.stack}`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API URL Test</title>
+</head>
+<body>
+    <h1>API URL Detection Test</h1>
+    <div id="results"></div>
+
+    <script src="js/backend-api.js"></script>
+    <script>
+        const results = document.getElementById('results');
+
+        results.innerHTML = `
+            <p><strong>window.location.hostname:</strong> ${window.location.hostname}</p>
+            <p><strong>window.location.href:</strong> ${window.location.href}</p>
+            <p><strong>Is localhost?</strong> ${window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'}</p>
+            <p><strong>Expected API_BASE_URL:</strong> ${(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:8000' : 'https://calyciform-undiffusively-jedidiah.ngrok-free.dev'}</p>
+            <p><strong>window.backendAPI exists:</strong> ${!!window.backendAPI}</p>
+            <p><strong>window.backendAPI.token:</strong> ${window.backendAPI?.token || 'null'}</p>
+            <p><strong>window.backendAPI.currentUserId:</strong> ${window.backendAPI?.currentUserId || 'null'}</p>
+        `;
+    </script>
+</body>
+</html>

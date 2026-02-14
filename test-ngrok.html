@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ngrok Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        h1 { margin-top: 0; }
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .success { background: rgba(34, 197, 94, 0.3); }
+        .error { background: rgba(239, 68, 68, 0.3); }
+        .loading { background: rgba(59, 130, 246, 0.3); }
+        button {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #f0f0f0;
+        }
+        pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        .info {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 LoveAI ngrok Connection Test</h1>
+
+        <div class="info">
+            <strong>Backend URL:</strong><br>
+            <code id="backendUrl">https://calyciform-undiffusively-jedidiah.ngrok-free.dev</code>
+        </div>
+
+        <button onclick="testConnection()">🧪 Test Backend Connection</button>
+        <button onclick="testHealth()">❤️ Test Health Endpoint</button>
+        <button onclick="openApp()">🚀 Open LoveAI App</button>
+
+        <div id="status" class="status loading">
+            Click a button to test your ngrok connection
+        </div>
+
+        <div id="response" style="display: none;">
+            <h3>Response:</h3>
+            <pre id="responseData"></pre>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://calyciform-undiffusively-jedidiah.ngrok-free.dev';
+
+        function updateStatus(message, type = 'loading') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+        }
+
+        function showResponse(data) {
+            document.getElementById('responseData').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('response').style.display = 'block';
+        }
+
+        async function testConnection() {
+            updateStatus('🔄 Testing connection to ngrok...', 'loading');
+            document.getElementById('response').style.display = 'none';
+
+            try {
+                const response = await fetch(API_BASE_URL);
+                const data = await response.json();
+
+                updateStatus('✅ Connection successful! Backend is reachable.', 'success');
+                showResponse(data);
+            } catch (error) {
+                updateStatus('❌ Connection failed: ' + error.message, 'error');
+                showResponse({ error: error.message, stack: error.stack });
+            }
+        }
+
+        async function testHealth() {
+            updateStatus('🔄 Checking backend health...', 'loading');
+            document.getElementById('response').style.display = 'none';
+
+            try {
+                const response = await fetch(API_BASE_URL + '/health');
+                const data = await response.json();
+
+                if (data.status === 'healthy') {
+                    updateStatus('✅ Backend is healthy and ready!', 'success');
+                } else {
+                    updateStatus('⚠️ Backend responded but status is: ' + data.status, 'error');
+                }
+                showResponse(data);
+            } catch (error) {
+                updateStatus('❌ Health check failed: ' + error.message, 'error');
+                showResponse({ error: error.message });
+            }
+        }
+
+        function openApp() {
+            window.location.href = '/index.html';
+        }
+
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            setTimeout(testHealth, 500);
+        });
+    </script>
+</body>
+</html>

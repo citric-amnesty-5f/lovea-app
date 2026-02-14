@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1 { font-size: 28px; margin-bottom: 20px; }
+        .info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .info p {
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .log {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-left: 3px solid transparent;
+            padding-left: 10px;
+        }
+        .success { border-left-color: #4ade80; color: #4ade80; }
+        .error { border-left-color: #f87171; color: #f87171; }
+        .info-log { border-left-color: #60a5fa; color: #60a5fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 CORS & API Test</h1>
+
+        <div class="info">
+            <p><strong>Your URL:</strong> <span id="currentUrl"></span></p>
+            <p><strong>Hostname:</strong> <span id="hostname"></span></p>
+            <p><strong>Expected API:</strong> <span id="expectedApi"></span></p>
+        </div>
+
+        <button onclick="testAPI()">Test API Connection</button>
+        <button onclick="testLogin()">Test Login</button>
+        <button onclick="clearLog()">Clear Log</button>
+
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        // Display current info
+        document.getElementById('currentUrl').textContent = window.location.href;
+        document.getElementById('hostname').textContent = window.location.hostname;
+
+        const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:8000'
+            : 'https://calyciform-undiffusively-jedidiah.ngrok-free.dev';
+
+        document.getElementById('expectedApi').textContent = API_URL;
+
+        function log(message, type = 'info-log') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        async function testAPI() {
+            log('Testing API connection...', 'info-log');
+            log(`URL: ${API_URL}/health`, 'info-log');
+
+            try {
+                const response = await fetch(API_URL + '/health');
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ API Connection SUCCESS`, 'success');
+                    log(`Response: ${JSON.stringify(data)}`, 'success');
+                } else {
+                    log(`❌ API returned status ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ FETCH ERROR: ${error.message}`, 'error');
+
+                // Check if it's a CORS error
+                if (error.message.includes('CORS') || error.message.includes('fetch')) {
+                    log(`⚠️ This looks like a CORS error!`, 'error');
+                    log(`Frontend origin: ${window.location.origin}`, 'error');
+                    log(`API URL: ${API_URL}`, 'error');
+                } else if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
+                    log(`⚠️ This could be a CORS or network error`, 'error');
+                }
+
+                log(`Stack: ${error.stack}`, 'error');
+            }
+        }
+
+        async function testLogin() {
+            log('Testing login...', 'info-log');
+
+            try {
+                const response = await fetch(API_URL + '/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'user1@loveai.com',
+                        password: 'user123'
+                    })
+                });
+
+                log(`Login response status: ${response.status}`, response.ok ? 'success' : 'error');
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ Login SUCCESS!`, 'success');
+                    log(`Token: ${data.access_token.substring(0, 30)}...`, 'success');
+
+                    // Now test if we can fetch profile
+                    log('Testing profile fetch with token...', 'info-log');
+
+                    const profileResponse = await fetch(API_URL + '/profiles/me', {
+                        headers: {
+                            'Authorization': `Bearer ${data.access_token}`
+                        }
+                    });
+
+                    if (profileResponse.ok) {
+                        const profile = await profileResponse.json();
+                        log(`✅ Profile fetch SUCCESS!`, 'success');
+                        log(`Name: ${profile.name}`, 'success');
+
+                        // Test discovery
+                        log('Testing discovery profiles...', 'info-log');
+                        const discoveryResponse = await fetch(API_URL + '/discovery/profiles?limit=20', {
+                            headers: {
+                                'Authorization': `Bearer ${data.access_token}`
+                            }
+                        });
+
+                        if (discoveryResponse.ok) {
+                            const profiles = await discoveryResponse.json();
+                            log(`✅ Discovery SUCCESS! Got ${profiles.length} profiles`, 'success');
+                        } else {
+                            log(`❌ Discovery failed: ${discoveryResponse.status}`, 'error');
+                        }
+                    } else {
+                        log(`❌ Profile fetch failed: ${profileResponse.status}`, 'error');
+                    }
+                } else {
+                    const errorData = await response.json();
+                    log(`❌ Login failed: ${JSON.stringify(errorData)}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ ERROR: ${error.message}`, 'error');
+                log(`Stack: ${error.stack}`, 'error');
+            }
+        }
+
+        // Auto-run API test on load
+        window.addEventListener('load', () => {
+            log('Page loaded', 'info-log');
+            setTimeout(testAPI, 500);
+        });
+    </script>
+</body>
+</html>
