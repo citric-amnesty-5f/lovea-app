@@ -2,10 +2,11 @@
 Main FastAPI application
 """
 import os
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 import uvicorn
 
 from app.database import init_db
@@ -97,6 +98,10 @@ app.include_router(discovery_routes.router)
 app.include_router(messaging_routes.router)
 app.include_router(admin_routes.router)
 
+# Optional: serve built frontend from this backend process (single-URL mode).
+SERVE_FRONTEND = os.getenv("SERVE_FRONTEND", "false").lower() == "true"
+FRONTEND_DIST_DIR = Path(__file__).resolve().parents[2] / "dist"
+
 
 # ============================================================================
 # Root Endpoints
@@ -105,6 +110,11 @@ app.include_router(admin_routes.router)
 @app.get("/")
 async def root():
     """API root endpoint"""
+    if SERVE_FRONTEND:
+        index_file = FRONTEND_DIST_DIR / "index.html"
+        if index_file.exists():
+            return FileResponse(index_file)
+
     return {
         "message": "Welcome to LoveAI API",
         "version": "1.0.0",
@@ -137,6 +147,27 @@ async def global_exception_handler(request, exc):
             "error": str(exc)
         }
     )
+
+
+# Serve static frontend assets for unknown paths when enabled.
+if SERVE_FRONTEND:
+    if FRONTEND_DIST_DIR.exists():
+        FRONTEND_DIST_DIR = FRONTEND_DIST_DIR.resolve()
+
+        @app.get("/{full_path:path}", include_in_schema=False)
+        async def serve_frontend(full_path: str):
+            if full_path:
+                candidate = (FRONTEND_DIST_DIR / full_path).resolve()
+                if FRONTEND_DIST_DIR in candidate.parents and candidate.is_file():
+                    return FileResponse(candidate)
+
+            index_file = FRONTEND_DIST_DIR / "index.html"
+            if index_file.exists():
+                return FileResponse(index_file)
+
+            raise HTTPException(status_code=404, detail="Frontend build not found")
+    else:
+        print(f"⚠ SERVE_FRONTEND is enabled but dist directory is missing: {FRONTEND_DIST_DIR}")
 
 
 # ============================================================================

@@ -29,9 +29,8 @@ function resolveApiBaseUrl() {
         return `http://${hostname}:${DEFAULT_API_PORT}`;
     }
 
-    // Last-resort default: same host on API port, avoids stale hardcoded tunnel URLs.
-    const apiProtocol = protocol === 'https:' ? 'https' : 'http';
-    return `${apiProtocol}://${hostname}:${DEFAULT_API_PORT}`;
+    // For public hosts, default to same origin (useful when frontend+API share one domain).
+    return window.location.origin;
 }
 
 class BackendAPI {
