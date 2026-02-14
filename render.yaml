@@ -29,7 +29,6 @@ services:
   - type: web
     name: loveai-frontend
     runtime: static
-    plan: free
     rootDir: .
     buildCommand: |
       rm -rf dist
