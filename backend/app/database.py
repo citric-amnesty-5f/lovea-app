@@ -17,6 +17,10 @@ DATABASE_URL = os.getenv(
     "sqlite:///./loveai.db"  # Default to SQLite for easy testing
 )
 
+# Render may provide postgres://; normalize for SQLAlchemy.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 # Create engine - SQLite doesn't support pool_size/max_overflow
 if DATABASE_URL.startswith("sqlite"):
     engine = create_engine(

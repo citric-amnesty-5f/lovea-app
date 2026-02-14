@@ -1,12 +1,14 @@
 """
 Main FastAPI application
 """
-from fastapi import FastAPI, Depends
+import os
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 
-from app.database import init_db, get_db
+from app.database import init_db
 from app.routers import (
     auth_routes,
     profile_routes,
@@ -37,18 +39,30 @@ origins = [
     "https://calyciform-undiffusively-jedidiah.ngrok-free.dev",  # ngrok backend
 ]
 
+env_origins = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+origins.extend(env_origins)
+
+origin_regex = os.getenv(
+    "ALLOWED_ORIGIN_REGEX",
+    r"^https?://("
+    r"localhost|127\.0\.0\.1|"
+    r"10\.\d{1,3}\.\d{1,3}\.\d{1,3}|"
+    r"192\.168\.\d{1,3}\.\d{1,3}|"
+    r"172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}|"
+    r".+\.ngrok-free\.(app|dev)|"
+    r".+\.ngrok\.io|"
+    r".+\.onrender\.com"
+    r")(:\d+)?$",
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    # Allow common development origins (LAN IPs and ngrok) without per-IP edits.
-    allow_origin_regex=r"^https?://("
-                       r"localhost|127\.0\.0\.1|"
-                       r"10\.\d{1,3}\.\d{1,3}\.\d{1,3}|"
-                       r"192\.168\.\d{1,3}\.\d{1,3}|"
-                       r"172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}|"
-                       r".+\.ngrok-free\.(app|dev)|"
-                       r".+\.ngrok\.io"
-                       r")(:\d+)?$",
+    allow_origin_regex=origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

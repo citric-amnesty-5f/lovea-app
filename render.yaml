@@ -1,0 +1,44 @@
+databases:
+  - name: loveai-db
+    plan: free
+    databaseName: loveai_db
+    user: loveai_user
+
+services:
+  - type: web
+    name: loveai-backend
+    env: python
+    plan: free
+    rootDir: backend
+    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: loveai-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SQL_ECHO
+        value: "false"
+      - key: ALLOWED_ORIGINS
+        value: https://loveai-frontend.onrender.com
+      - key: OPENAI_API_KEY
+        sync: false
+
+  - type: static_site
+    name: loveai-frontend
+    plan: free
+    rootDir: .
+    buildCommand: |
+      rm -rf dist
+      mkdir -p dist
+      cp index.html styles.css config.js dist/
+      cp -R js dist/js
+      printf 'window.LOVEAI_API_BASE_URL = "%s";\n' "$LOVEAI_API_BASE_URL" > dist/config.js
+    staticPublishPath: dist
+    envVars:
+      - key: LOVEAI_API_BASE_URL
+        value: https://loveai-backend.onrender.com
