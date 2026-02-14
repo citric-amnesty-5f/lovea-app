@@ -7,7 +7,7 @@ databases:
 services:
   - type: web
     name: loveai-backend
-    env: python
+    runtime: python
     plan: free
     rootDir: backend
     autoDeploy: true
@@ -23,13 +23,12 @@ services:
         generateValue: true
       - key: SQL_ECHO
         value: "false"
-      - key: ALLOWED_ORIGINS
-        value: https://loveai-frontend.onrender.com
       - key: OPENAI_API_KEY
         sync: false
 
-  - type: static_site
+  - type: web
     name: loveai-frontend
+    runtime: static
     plan: free
     rootDir: .
     buildCommand: |
@@ -41,4 +40,7 @@ services:
     staticPublishPath: dist
     envVars:
       - key: LOVEAI_API_BASE_URL
-        value: https://loveai-backend.onrender.com
+        fromService:
+          type: web
+          name: loveai-backend
+          envVarKey: RENDER_EXTERNAL_URL
