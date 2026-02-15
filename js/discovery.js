@@ -114,7 +114,9 @@ function showCurrentProfile() {
     container.style.transform = 'translateX(0) rotate(0deg)';
     container.style.opacity = '1';
 
-    const primaryPhoto = profile.photos?.[0]?.data || null;
+    const firstPhoto = profile.photos?.[0];
+    const apiBase = window.backendAPI ? window.backendAPI.apiBaseUrl : '';
+    const primaryPhoto = firstPhoto ? (firstPhoto.data || (apiBase + firstPhoto.url)) : null;
 
     container.innerHTML = `
         <div class="swipe-card-inner">
@@ -185,9 +187,13 @@ function updateProfileDetails(profile) {
             <div class="profile-details-section">
                 <h4>Photos</h4>
                 <div class="profile-photos-grid">
-                    ${profile.photos.map((photo, index) =>
-        `<img src="${photo.data}" class="profile-photo-thumb" alt="Photo ${index + 1}">`
-    ).join('')}
+                    ${(() => {
+                        const base = window.backendAPI ? window.backendAPI.apiBaseUrl : '';
+                        return profile.photos.map((photo, index) => {
+                            const src = photo.data || (base + photo.url);
+                            return `<img src="${src}" class="profile-photo-thumb" alt="Photo ${index + 1}">`;
+                        }).join('');
+                    })()}
                 </div>
             </div>
         ` : ''}

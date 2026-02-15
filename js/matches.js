@@ -24,8 +24,17 @@ async function showMatchCelebration(match) {
     try {
         const otherProfile = match.other_user_profile || match.otherProfile;
         const otherName = otherProfile?.name || 'someone';
-        const otherAvatar = otherProfile?.photos?.[0]?.url || '👤';
+        const otherPhotoUrl = otherProfile?.photos?.[0]?.url || null;
         const userName = currentUser?.profile?.name || currentUser?.name || 'You';
+        const myPhotoUrl = currentUser?.profile?.photos?.[0]?.url || null;
+        const apiBase = window.backendAPI ? window.backendAPI.apiBaseUrl : '';
+
+        const renderAvatarHtml = (photoUrl, fallback) => {
+            if (photoUrl) {
+                return `<img src="${apiBase}${photoUrl}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 50%;" alt="">`;
+            }
+            return fallback;
+        };
 
         // Create celebration modal
         const modal = document.createElement('div');
@@ -40,12 +49,12 @@ async function showMatchCelebration(match) {
                 </div>
                 <div class="match-profiles">
                     <div class="match-profile-item">
-                        <div class="match-profile-avatar">👤</div>
+                        <div class="match-profile-avatar">${renderAvatarHtml(myPhotoUrl, '👤')}</div>
                         <div class="match-profile-name">${userName}</div>
                     </div>
                     <div class="match-heart">❤️</div>
                     <div class="match-profile-item">
-                        <div class="match-profile-avatar">${otherAvatar}</div>
+                        <div class="match-profile-avatar">${renderAvatarHtml(otherPhotoUrl, '👤')}</div>
                         <div class="match-profile-name">${otherName}</div>
                     </div>
                 </div>
@@ -246,13 +255,22 @@ function displayMatchesGrid(matches) {
         const compatibility = Math.round(match.otherProfile?.aiCompatibility || match.compatibilityScore || 0);
         const timeAgo = getTimeAgo(match.createdAt);
         const name = match.otherUser?.name || match.otherProfile?.name || 'Unknown';
-        const avatar = match.otherProfile?.avatar || '👤';
+        const avatarRaw = match.otherProfile?.avatar || '👤';
         const bio = match.otherProfile?.bio || '';
         const age = match.otherProfile?.age || '';
         const occupation = match.otherProfile?.occupation || '';
 
+        // Render avatar as image if it's a URL, otherwise as emoji
+        const apiBase = window.backendAPI ? window.backendAPI.apiBaseUrl : '';
+        let avatarHtml;
+        if (avatarRaw.startsWith('/') || avatarRaw.startsWith('http')) {
+            avatarHtml = `<img src="${apiBase}${avatarRaw}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" alt="${name}">`;
+        } else {
+            avatarHtml = avatarRaw;
+        }
+
         card.innerHTML = `
-            <div class="match-grid-avatar">${avatar}</div>
+            <div class="match-grid-avatar">${avatarHtml}</div>
             ${match.unreadCount > 0 ? `<div class="match-grid-badge">${match.unreadCount}</div>` : ''}
             <div class="match-grid-name">${name}${age ? ', ' + age : ''}</div>
             ${occupation ? `<div class="match-grid-occupation">${occupation}</div>` : ''}
@@ -283,7 +301,14 @@ function showMatchProfile(match) {
     const interests = otherProfile?.interests || [];
     const iceBreakers = match.iceBreakers || [];
     const reasons = match.compatibilityReasons || [];
-    const avatar = otherProfile?.avatar || '👤';
+    const avatarRaw = otherProfile?.avatar || '👤';
+    const apiBase = window.backendAPI ? window.backendAPI.apiBaseUrl : '';
+    let profileAvatarHtml;
+    if (avatarRaw.startsWith('/') || avatarRaw.startsWith('http')) {
+        profileAvatarHtml = `<img src="${apiBase}${avatarRaw}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 3px solid #e91e63;" alt="${name}">`;
+    } else {
+        profileAvatarHtml = `<span style="font-size: 64px;">${avatarRaw}</span>`;
+    }
 
     const modal = document.createElement('div');
     modal.className = 'modal active';
@@ -295,7 +320,7 @@ function showMatchProfile(match) {
             </div>
             <div class="modal-body">
                 <div style="text-align: center; margin-bottom: 16px;">
-                    <div style="font-size: 64px; margin-bottom: 8px;">${avatar}</div>
+                    <div style="margin-bottom: 8px;">${profileAvatarHtml}</div>
                     <div style="font-size: 24px; font-weight: bold; color: #e91e63;">${compatibility}% Match</div>
                 </div>
 

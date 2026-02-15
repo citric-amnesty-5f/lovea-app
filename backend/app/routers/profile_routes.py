@@ -1,9 +1,15 @@
 """
 Profile management routes
 """
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+import base64
+import uuid
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request
 from sqlalchemy.orm import Session
 from typing import List
+from pydantic import BaseModel
+from typing import Optional
 
 from app.database import get_db
 from app.models import User, Profile, Interest, Photo, Preference, Match, Notification, MatchStatus
@@ -16,6 +22,8 @@ from app.auth import get_current_user, require_ownership_or_admin
 from app.services.ai_service import AIService
 from datetime import datetime, timedelta
 from sqlalchemy import and_, or_
+
+UPLOADS_DIR = Path(__file__).resolve().parents[2] / "uploads"
 
 router = APIRouter(prefix="/profiles", tags=["Profiles"])
 
@@ -334,6 +342,93 @@ async def remove_interest(
 # ============================================================================
 # Photos
 # ============================================================================
+
+
+class PhotoUploadData(BaseModel):
+    """Photo upload via base64 data URI"""
+    data: str  # base64 data URI (e.g. "data:image/png;base64,...")
+    is_primary: bool = False
+    order: int = 0
+
+
+@router.post("/me/photos/upload", response_model=PhotoBase)
+async def upload_photo(
+    upload_data: PhotoUploadData,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Upload a photo from base64 data URI.
+    Saves the file to disk and creates a Photo record.
+    """
+    profile = current_user.profile
+    if not profile:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+
+    if len(profile.photos) >= 6:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Maximum 6 photos allowed")
+
+    # Parse base64 data URI
+    data_uri = upload_data.data
+    if not data_uri.startswith("data:"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid data URI format")
+
+    try:
+        header, encoded = data_uri.split(",", 1)
+        # e.g. "data:image/png;base64" -> "image/png"
+        mime_type = header.split(":")[1].split(";")[0]
+        ext_map = {
+            "image/jpeg": ".jpg",
+            "image/jpg": ".jpg",
+            "image/png": ".png",
+            "image/gif": ".gif",
+            "image/webp": ".webp",
+        }
+        ext = ext_map.get(mime_type, ".jpg")
+        image_data = base64.b64decode(encoded)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid base64 image data")
+
+    # Validate file size (5MB max)
+    if len(image_data) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Image too large. Max 5MB.")
+
+    # Save file to disk
+    filename = f"{uuid.uuid4().hex}{ext}"
+    photos_dir = UPLOADS_DIR / "photos"
+    photos_dir.mkdir(parents=True, exist_ok=True)
+    filepath = photos_dir / filename
+    filepath.write_bytes(image_data)
+
+    # Build URL for the photo
+    photo_url = f"/uploads/photos/{filename}"
+
+    # Create Photo record
+    new_photo = Photo(
+        url=photo_url,
+        thumbnail_url=photo_url,
+        order=upload_data.order,
+        is_primary=upload_data.is_primary,
+    )
+    db.add(new_photo)
+    db.flush()
+
+    profile.photos.append(new_photo)
+
+    # If first photo or marked primary, set as primary
+    if len(profile.photos) == 1 or upload_data.is_primary:
+        for photo in profile.photos:
+            if photo.id != new_photo.id:
+                photo.is_primary = False
+        new_photo.is_primary = True
+
+    profile.profile_completion = calculate_profile_completion(profile)
+    db.commit()
+    db.refresh(new_photo)
+
+    return new_photo
+
 
 @router.post("/me/photos", response_model=PhotoBase)
 async def add_photo(

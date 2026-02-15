@@ -110,6 +110,23 @@ async function handleSignup() {
 
         localStorage.setItem('loveai_current_user', JSON.stringify(currentUser));
 
+        // Upload profile picture if selected
+        const photoInput = document.getElementById('signupPhoto');
+        if (photoInput && photoInput.files.length > 0) {
+            try {
+                const file = photoInput.files[0];
+                if (file.size <= 5 * 1024 * 1024) {
+                    const base64 = await fileToBase64(file);
+                    await window.backendAPI.uploadPhoto(base64, true, 0);
+                    console.log('Profile picture uploaded successfully');
+                } else {
+                    console.warn('Profile picture too large, skipping upload');
+                }
+            } catch (photoError) {
+                console.error('Profile picture upload failed (non-fatal):', photoError);
+            }
+        }
+
         showAuthSuccess('Account created successfully! Redirecting...', 'signup');
 
         setTimeout(async () => {

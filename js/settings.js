@@ -81,7 +81,15 @@ function displaySettingsForm(preferences, userProfile) {
             <div class="settings-section">
                 <h3>My Profile</h3>
                 <div class="profile-preview">
-                    <div class="profile-avatar-large">${userProfile?.avatar || '👤'}</div>
+                    ${(() => {
+                        const primaryPhoto = userProfile?.photos?.find(p => p.is_primary) || userProfile?.photos?.[0];
+                        if (primaryPhoto) {
+                            const apiBase = window.backendAPI ? window.backendAPI.apiBaseUrl : '';
+                            return `<img src="${apiBase}${primaryPhoto.url}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 3px solid #ff6b6b;">`;
+                        }
+                        return '<div class="profile-avatar-large">👤</div>';
+                    })()}
+                    <div style="margin-top: 8px; font-weight: 600;">${userProfile?.name || 'Your Profile'}</div>
                     <button class="btn btn-secondary" onclick="editProfile()">Edit Profile</button>
                 </div>
             </div>
@@ -247,7 +255,27 @@ async function saveSettings() {
 }
 
 async function editProfile() {
-    const userProfile = await datingDB.getUserProfile(currentUser.id);
+    let userProfile = null;
+    if (window.backendAPI && window.backendAPI.isLoggedIn()) {
+        userProfile = await window.backendAPI.getMyProfile();
+    }
+
+    // Build existing photos preview HTML
+    let existingPhotosHtml = '';
+    if (userProfile?.photos && userProfile.photos.length > 0) {
+        const apiBase = window.backendAPI ? window.backendAPI.apiBaseUrl : '';
+        existingPhotosHtml = `
+            <div class="existing-photos" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+                ${userProfile.photos.map(p => `
+                    <div class="photo-thumb" style="position: relative; width: 80px; height: 80px;">
+                        <img src="${apiBase}${p.url}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: ${p.is_primary ? '3px solid #ff6b6b' : '1px solid #ddd'};">
+                        <button onclick="deleteExistingPhoto(${p.id}, this)" style="position: absolute; top: -6px; right: -6px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; line-height: 1;">&times;</button>
+                        ${p.is_primary ? '<span style="position: absolute; bottom: 2px; left: 2px; background: #ff6b6b; color: white; font-size: 9px; padding: 1px 4px; border-radius: 4px;">Primary</span>' : ''}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
 
     const modal = document.createElement('div');
     modal.className = 'modal active';
@@ -261,15 +289,9 @@ async function editProfile() {
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label>Avatar Emoji</label>
-                    <input type="text" id="profileAvatar" value="${userProfile?.avatar || '👤'}"
-                           maxlength="2" placeholder="👤">
-                </div>
-
-                <div class="form-group">
                     <label>Bio</label>
                     <textarea id="profileBio" rows="4" placeholder="Tell people about yourself...">${userProfile?.bio || ''}</textarea>
-                    ${aiEngine.hasApiKey() ? '<button class="btn btn-sm" onclick="generateBio()">✨ AI Suggestions</button>' : ''}
+                    ${typeof aiEngine !== 'undefined' && aiEngine.hasApiKey() ? '<button class="btn btn-sm" onclick="generateBio()">AI Suggestions</button>' : ''}
                 </div>
 
                 <div class="form-group">
@@ -285,16 +307,14 @@ async function editProfile() {
                 </div>
 
                 <div class="form-group">
-                    <label>Interests (comma separated)</label>
-                    <input type="text" id="profileInterests"
-                           value="${userProfile?.interests?.join(', ') || ''}"
-                           placeholder="hiking, cooking, music">
+                    <label>Current Photos</label>
+                    ${existingPhotosHtml || '<p style="color: #999; font-size: 13px;">No photos uploaded yet.</p>'}
                 </div>
 
                 <div class="form-group">
-                    <label>Photos</label>
+                    <label>Upload New Photos</label>
                     <input type="file" id="profilePhotos" accept="image/*" multiple>
-                    <small>Select up to 6 photos</small>
+                    <small>Select up to 6 photos. Max 5MB each.</small>
                 </div>
             </div>
             <div class="modal-footer">
@@ -305,6 +325,18 @@ async function editProfile() {
     `;
 
     document.body.appendChild(modal);
+}
+
+async function deleteExistingPhoto(photoId, buttonEl) {
+    try {
+        await window.backendAPI.deletePhoto(photoId);
+        // Remove the photo thumbnail from DOM
+        buttonEl.closest('.photo-thumb').remove();
+        showStatus('Photo deleted');
+    } catch (error) {
+        console.error('Error deleting photo:', error);
+        showStatus('Error deleting photo');
+    }
 }
 
 function closeEditProfileModal() {
@@ -350,37 +382,32 @@ async function generateBio() {
 
 async function saveProfile() {
     try {
-        const avatar = document.getElementById('profileAvatar').value || '👤';
         const bio = document.getElementById('profileBio').value.trim();
         const occupation = document.getElementById('profileOccupation').value.trim();
         const location = document.getElementById('profileLocation').value.trim();
-        const interests = document.getElementById('profileInterests').value
-            .split(',')
-            .map(i => i.trim())
-            .filter(i => i);
 
-        // Handle photo uploads
-        const photos = await handlePhotoUploads();
+        // Update text profile fields via backend API
+        const profileData = { bio, occupation, location };
+        await window.backendAPI.updateProfile(profileData);
 
-        const profileData = {
-            userId: currentUser.id,
-            name: currentUser.name,
-            age: currentUser.age,
-            gender: currentUser.gender,
-            avatar,
-            bio,
-            occupation,
-            location,
-            interests,
-            photos
-        };
-
-        const existingProfile = await datingDB.getUserProfile(currentUser.id);
-
-        if (existingProfile) {
-            await datingDB.updateUserProfile(existingProfile.id, profileData);
-        } else {
-            await datingDB.createUserProfile(profileData);
+        // Upload new photos via backend API
+        const fileInput = document.getElementById('profilePhotos');
+        if (fileInput && fileInput.files.length > 0) {
+            const maxPhotos = Math.min(fileInput.files.length, 6);
+            for (let i = 0; i < maxPhotos; i++) {
+                const file = fileInput.files[i];
+                if (file.size > 5 * 1024 * 1024) {
+                    showStatus(`Photo ${i + 1} is too large. Max 5MB.`);
+                    continue;
+                }
+                try {
+                    const base64 = await fileToBase64(file);
+                    await window.backendAPI.uploadPhoto(base64, i === 0, i);
+                    console.log(`Photo ${i + 1} uploaded`);
+                } catch (photoErr) {
+                    console.error(`Photo ${i + 1} upload failed:`, photoErr);
+                }
+            }
         }
 
         showStatus('Profile saved successfully!');

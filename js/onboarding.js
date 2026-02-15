@@ -359,9 +359,6 @@ async function completeOnboarding() {
             return;
         }
 
-        // Handle photos (note: photo upload may need separate implementation for backend)
-        const photos = await handleOnboardingPhotos();
-
         // Prepare profile data for backend API
         const profileData = {
             bio,
@@ -372,6 +369,17 @@ async function completeOnboarding() {
 
         // Update profile using backend API
         await window.backendAPI.updateProfile(profileData);
+
+        // Upload photos to backend
+        const photos = await handleOnboardingPhotos();
+        for (let i = 0; i < photos.length; i++) {
+            try {
+                await window.backendAPI.uploadPhoto(photos[i].data, photos[i].primary, i);
+                console.log(`Onboarding photo ${i + 1} uploaded`);
+            } catch (photoErr) {
+                console.error(`Onboarding photo ${i + 1} upload failed:`, photoErr);
+            }
+        }
 
         // Save preferences
         const genderPref = document.getElementById('prefGender')?.value || 'all';

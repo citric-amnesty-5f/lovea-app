@@ -78,7 +78,13 @@
                         <option value="other">Other</option>
                     </select>
                 </div>
-                
+
+                <div class="form-group">
+                    <label for="signupPhoto">Profile Picture (optional)</label>
+                    <input type="file" id="signupPhoto" accept="image/*">
+                    <small style="color: #666; font-size: 12px;">Max 5MB. JPG, PNG, or WebP.</small>
+                </div>
+
                 <button class="auth-btn" id="signupBtn" onclick="handleSignup()">Create Account</button>
                 
                 <p>Already have an account? <span class="auth-switch" onclick="switchToLogin()">Login</span></p>

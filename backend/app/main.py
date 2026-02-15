@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 from app.database import init_db
@@ -73,6 +74,14 @@ app.add_middleware(
 # ============================================================================
 # Startup/Shutdown Events
 # ============================================================================
+
+UPLOADS_DIR = Path(__file__).resolve().parents[1] / "uploads"
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+(UPLOADS_DIR / "photos").mkdir(exist_ok=True)
+
+# Mount uploads directory for serving uploaded photos
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
+
 
 @app.on_event("startup")
 async def startup_event():

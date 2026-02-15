@@ -90,8 +90,14 @@ function displayMatchesList(matches) {
             matchCard.classList.add('has-unread');
         }
 
+        const msgAvatarRaw = match.otherProfile?.avatar || '👤';
+        const msgApiBase = window.backendAPI ? window.backendAPI.apiBaseUrl : '';
+        const msgAvatarHtml = (msgAvatarRaw.startsWith('/') || msgAvatarRaw.startsWith('http'))
+            ? `<img src="${msgApiBase}${msgAvatarRaw}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" alt="">`
+            : msgAvatarRaw;
+
         matchCard.innerHTML = `
-            <div class="match-avatar">${match.otherProfile?.avatar || '👤'}</div>
+            <div class="match-avatar">${msgAvatarHtml}</div>
             <div class="match-info">
                 <div class="match-name">${match.otherUser?.name || 'Unknown'}</div>
                 <div class="match-preview">${match.lastMessageAt ? 'Tap to chat' : 'Say hi!'}</div>
@@ -119,7 +125,14 @@ async function openChat(match) {
 
     // Set chat header
     document.getElementById('chatPartnerName').textContent = match.otherUser?.name || 'Unknown';
-    document.getElementById('chatPartnerAvatar').textContent = match.otherProfile?.avatar || '👤';
+    const chatAvatarRaw = match.otherProfile?.avatar || '👤';
+    const chatAvatarEl = document.getElementById('chatPartnerAvatar');
+    const chatApiBase = window.backendAPI ? window.backendAPI.apiBaseUrl : '';
+    if (chatAvatarRaw.startsWith('/') || chatAvatarRaw.startsWith('http')) {
+        chatAvatarEl.innerHTML = `<img src="${chatApiBase}${chatAvatarRaw}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" alt="">`;
+    } else {
+        chatAvatarEl.textContent = chatAvatarRaw;
+    }
 
     // Load messages
     await loadChatMessages(match.id);

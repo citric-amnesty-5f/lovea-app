@@ -235,6 +235,14 @@ class BackendAPI {
         return await this.apiCall('/profiles/me/photos', 'POST', photoData);
     }
 
+    async uploadPhoto(base64Data, isPrimary = false, order = 0) {
+        return await this.apiCall('/profiles/me/photos/upload', 'POST', {
+            data: base64Data,
+            is_primary: isPrimary,
+            order: order
+        });
+    }
+
     async deletePhoto(photoId) {
         return await this.apiCall(`/profiles/me/photos/${photoId}`, 'DELETE');
     }
@@ -368,6 +376,16 @@ class BackendAPI {
 
 // Create global API instance
 window.backendAPI = new BackendAPI();
+
+// Shared utility: convert a File to a base64 data URI
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
 
 // Export for modules
 if (typeof module !== 'undefined' && module.exports) {
